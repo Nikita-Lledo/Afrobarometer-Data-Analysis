@@ -1,3 +1,9 @@
+
+
+
+# x <- readRDS(file = "data/d_2018.rds")
+
+
 library(shiny)
 library(shinythemes)
 library(tidyverse)

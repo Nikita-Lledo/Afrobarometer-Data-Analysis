@@ -14,13 +14,19 @@ library(tidyverse)
 # Define UI for application that draws a histogram
 shinyUI(
     navbarPage(theme = shinytheme("journal"), 
-               "App Title",
+               "Afrobarometer",
                tabPanel(
-                   "Page1", p("Here's some words"),
-                   h1("here is a header")),
-               # You would add your content within the parentheses above.
+                   "About", 
+                   h1("Afrobarometer Data Analysis"),
+                   p("This data project will be taking data from 7 surveys run by the Afrobarometer. 
+                   Afrobarometer is a comparative series of public attitude surveys that assess African citizen's attitudes to democracy and governance, markets and civil society.
+                   This data analytics project is going to specifcially focus on only a portion of the questions that are asked and focusing speficially on governance. 
+                   We are going to explore both differentials between countries within a survey period as well as differences over time. 
+                   The Afrobarometer survey has been running since 1999 and has expanded from covering 7 countries to 34 countries in the lastest survey."),
+                   p(a("link to my github repo!",  href ="https://github.com/Nikita-Lledo/final-project.git")),
+               ),
                tabPanel(
-                   "Page2", 
-                   plotOutput("cars_plot")
+                   "Data", 
+                   
                )
     ))
