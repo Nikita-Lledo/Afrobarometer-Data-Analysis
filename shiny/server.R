@@ -1,7 +1,4 @@
-
-
-
-# x <- readRDS(file = "data/d_2018.rds")
+x <- readRDS(file = "data/d_2018.rds")
 
 
 library(shiny)
@@ -13,10 +10,16 @@ library(tidyverse)
 
 shinyServer(function(input, output) {
 
-    output$cars_plot <- renderPlot({
-
-        ggplot(data = mtcars, mapping = aes(x = cyl, y = mpg)) +
-            geom_point()
+    output$location <- renderPlot({
+        
+        x %>%
+        group_by(country) %>%
+        summarize(num_res = n()) %>%
+        
+        ggplot(mapping = aes(x = country, y = num_res)) +
+        geom_col() +
+        labs(title = "The number of respondents per country that participated")
+        
 
     })
 
