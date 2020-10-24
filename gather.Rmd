@@ -1,0 +1,27 @@
+---
+title: "gather"
+author: "Nikita_Lledo"
+date: "10/16/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(ggthemes)
+```
+
+
+```{r}
+d_2018 <- read.csv("data/africabar_2018.csv")
+
+d_2013 <- read.csv("data/africabar_2013.csv")
+
+saveRDS(d_2018, file = "shiny/data/d_2018.rds")
+
+saveRDS(d_2013, file = "shiny/data/d_2013.rds")
+
+```
+
+

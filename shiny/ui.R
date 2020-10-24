@@ -29,8 +29,8 @@ shinyUI(
                ),
                tabPanel(
                    "Data", 
-                   p("This will show the number of respondents per country that participated in the 2018 survey"),
-                   plotOutput("location")
+                   p("Graph!"),
+                   plotOutput("news")
                    
                )
     ))
