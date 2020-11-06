@@ -32,5 +32,9 @@ shinyUI(
                    p("Graph!"),
                    plotOutput("news")
                    
+               ),
+               tabPanel("Attractive Graph",
+                        p("This is a heat map showing the number of respondants for the 2018 Survey"),
+                        plotOutput("resp")
                )
     ))

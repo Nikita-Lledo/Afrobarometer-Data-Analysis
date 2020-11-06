@@ -51,9 +51,34 @@ shinyServer(function(input, output) {
                                         "Less than once \n a month",
                                         "Never")) +
             theme_bw()
-
+        
+    })
+    
+    output$resp <- renderPlot ({
+        
+        pop2018 <- x %>% 
+            select(country, respno) %>%
+            group_by(country) %>%
+            summarize(num_resp = n(), .groups = "drop") 
+        
+        world <- ne_countries(scale = "medium", returnclass = "sf")
+        
+        pop_map2018 <- left_join(world, pop2018, by = c("sovereignt" = "country"))
+        
+        pop_map2018 %>%
+            rename("Respondents" = num_resp) %>%
+            
+            ggplot() + 
+            geom_sf(aes(fill = num_resp)) +
+            scale_fill_viridis_c(option = "plasma", trans = "sqrt") +
+            coord_sf(crs = st_crs(3035)) +
+            labs(title = "Heat map showing the number of respondants in 2018") +
+        
+    
     })
 
 })
+
+
 
 

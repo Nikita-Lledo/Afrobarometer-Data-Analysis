@@ -10,6 +10,14 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(readxl)
 library(ggthemes)
+library(sf)
+library(ggplot2)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(rgeos)
+library(leaflet)
+library(htmltools)
+library(maptools)
 ```
 
 
