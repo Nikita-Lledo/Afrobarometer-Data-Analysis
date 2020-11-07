@@ -69,10 +69,10 @@ shinyServer(function(input, output) {
             rename("Respondents" = num_resp) %>%
             
             ggplot() + 
-            geom_sf(aes(fill = num_resp)) +
+            geom_sf(aes(fill = Respondents)) +
             scale_fill_viridis_c(option = "plasma", trans = "sqrt") +
             coord_sf(crs = st_crs(3035)) +
-            labs(title = "Heat map showing the number of respondants in 2018") +
+            labs(title = "Heat map showing the number of respondants in 2018")
         
     
     })
