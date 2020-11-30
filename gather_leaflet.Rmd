@@ -1,0 +1,50 @@
+---
+title: "gather_leaflet"
+author: "Nikita_Lledo"
+date: "11/29/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(readr)
+library(janitor)
+library(rgdal)
+library(tidyverse)
+
+```
+
+
+```{r}
+
+# Read in World Country code key. 
+
+wb_codes <- read_csv("raw_data/wb_country_codes_2.csv",
+                     col_types = cols(Continent_Name = col_character(),
+                                      Continent_Code = col_character(),
+                                      Country_Name = col_character(),
+                                      Two_Letter_Country_Code = col_character(),
+                                      Three_Letter_Country_Code = col_character(),
+                                      Country_Number = col_double())) %>%
+  clean_names() %>%
+  mutate(country_code = three_letter_country_code)
+
+# Read in World Bank population dataset. Left-join with WB country code key.
+
+pop <- read_csv("raw_data/wb_pop2.csv") %>%
+  clean_names %>%
+  select(c(country_code, x2019)) 
+#  joined <- left_join(wb_codes, by = c("country_code" = "country_code"))
+
+
+
+basins_geometry <- readOGR("raw_data/geometry/wb_major_basins", layer = "Major_Basins_of_the_World")
+
+basins_geometry
+
+countries_geometry <- readOGR("raw_data/geometry/countries_wgs84", layer = "countries_WGS84")
+
+
+```
+
