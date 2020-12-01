@@ -7,6 +7,9 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+# loading the necessary libraries 
+
 library(tidyverse)
 library(readxl)
 library(ggthemes)
@@ -29,6 +32,8 @@ library(gt)
 
 
 ```{r}
+
+# Reading and cleaning the 2018 data
 
 d_2018 <- read.csv("raw_data/africabar_2018.csv") %>%
   mutate(year = "2018") %>%
@@ -113,6 +118,111 @@ d_2018 <- read.csv("raw_data/africabar_2018.csv") %>%
                             unfair == "Never" ~ 0,
                             TRUE ~ 9)) %>%
   
+  rename(import_prob1 = q55pt1) %>%
+  mutate(import_prob1 = case_when(import_prob1 == "Management of the economy" ~ 1,
+                                  import_prob1 == "Wages, incomes and salaries" ~ 2,
+                                  import_prob1 == "Unemployment" ~ 3, 
+                                  import_prob1 == "Poverty/destitution" ~ 4,
+                                  import_prob1 == "Rates and Taxes" ~ 5,
+                                  import_prob1 == "Loans / credit" ~ 6,
+                                  import_prob1 == "Farming/agriculture" ~ 7,
+                                  import_prob1 == "Agricultural marketing" ~ 32,
+                                  import_prob1 == "Food shortage/famine" ~ 8,
+                                  import_prob1 == "Drought" ~ 9,
+                                  import_prob1 == "Land" ~ 10,
+                                  import_prob1 == "Transportation" ~ 11,
+                                  import_prob1 == "Communications" ~ 12,
+                                  import_prob1 == "Infrastructure / roads" ~ 13,
+                                  import_prob1 == "Education" ~ 14,
+                                  import_prob1 == "Housing" ~ 15,
+                                  import_prob1 == "Electricity" ~ 16,
+                                  import_prob1 == "Water supply" ~ 17,
+                                  import_prob1 == "Orphans/street children/homeless children" ~ 18,
+                                  import_prob1 == "Services (other)" ~ 19,
+                                  import_prob1 == "Health" ~ 20,
+                                  import_prob1 == "aids" ~ 21,
+                                  import_prob1 == "Sickness / Disease" ~ 22,
+                                  import_prob1 == "Crime and Security" ~ 23,
+                                  import_prob1 == "Corruption" ~ 24,
+                                  import_prob1 == "Political violence" ~ 25,
+                                  import_prob1 == "Political instability / ethnic tensions" ~ 26,
+                                  import_prob1 == "Discrimination/ inequality" ~ 27, 
+                                  import_prob1 == "Gender issues / womenâ€™s rights" ~ 28,
+                                  import_prob1 == "Democracy/political rights" ~ 29,
+                                  import_prob1 == "Civil war" ~ 31,
+                                  import_prob1 == "War (international)" ~ 30,
+                                  TRUE ~ 9999)) %>%
+  
+  rename(import_prob2 = q55pt2) %>%
+  mutate(import_prob2 = case_when(import_prob2 == "Management of the economy" ~ 1,
+                                  import_prob2 == "Wages, incomes and salaries" ~ 2,
+                                  import_prob2 == "Unemployment" ~ 3, 
+                                  import_prob2 == "Poverty/destitution" ~ 4,
+                                  import_prob2 == "Rates and Taxes" ~ 5,
+                                  import_prob2 == "Loans / credit" ~ 6,
+                                  import_prob2 == "Farming/agriculture" ~ 7,
+                                  import_prob2 == "Agricultural marketing" ~ 32,
+                                  import_prob2 == "Food shortage/famine" ~ 8,
+                                  import_prob2 == "Drought" ~ 9,
+                                  import_prob2 == "Land" ~ 10,
+                                  import_prob2 == "Transportation" ~ 11,
+                                  import_prob2 == "Communications" ~ 12,
+                                  import_prob2 == "Infrastructure / roads" ~ 13,
+                                  import_prob2 == "Education" ~ 14,
+                                  import_prob2 == "Housing" ~ 15,
+                                  import_prob2 == "Electricity" ~ 16,
+                                  import_prob2 == "Water supply" ~ 17,
+                                  import_prob2 == "Orphans/street children/homeless children" ~ 18,
+                                  import_prob2 == "Services (other)" ~ 19,
+                                  import_prob2 == "Health" ~ 20,
+                                  import_prob2 == "aids" ~ 21,
+                                  import_prob2 == "Sickness / Disease" ~ 22,
+                                  import_prob2 == "Crime and Security" ~ 23,
+                                  import_prob2 == "Corruption" ~ 24,
+                                  import_prob2 == "Political violence" ~ 25,
+                                  import_prob2 == "Political instability / ethnic tensions" ~ 26,
+                                  import_prob2 == "Discrimination/ inequality" ~ 27, 
+                                  import_prob2 == "Gender issues / womenâ€™s rights" ~ 28,
+                                  import_prob2 == "Democracy/political rights" ~ 29,
+                                  import_prob2 == "Civil war" ~ 31,
+                                  import_prob2 == "War (international)" ~ 30,
+                                  TRUE ~ 9999)) %>%
+           
+  rename(import_prob3 = q55pt3) %>%
+  mutate(import_prob3 = case_when(import_prob3 == "Management of the economy" ~ 1,
+                                  import_prob3 == "Wages, incomes and salaries" ~ 2,
+                                  import_prob3 == "Unemployment" ~ 3, 
+                                  import_prob3 == "Poverty/destitution" ~ 4,
+                                  import_prob3 == "Rates and Taxes" ~ 5,
+                                  import_prob3 == "Loans / credit" ~ 6,
+                                  import_prob3 == "Farming/agriculture" ~ 7,
+                                  import_prob3 == "Agricultural marketing" ~ 32,
+                                  import_prob3 == "Food shortage/famine" ~ 8,
+                                  import_prob3 == "Drought" ~ 9,
+                                  import_prob3 == "Land" ~ 10,
+                                  import_prob3 == "Transportation" ~ 11,
+                                  import_prob3 == "Communications" ~ 12,
+                                  import_prob3 == "Infrastructure / roads" ~ 13,
+                                  import_prob3 == "Education" ~ 14,
+                                  import_prob3 == "Housing" ~ 15,
+                                  import_prob3 == "Electricity" ~ 16,
+                                  import_prob3 == "Water supply" ~ 17,
+                                  import_prob3 == "Orphans/street children/homeless children" ~ 18,
+                                  import_prob3 == "Services (other)" ~ 19,
+                                  import_prob3 == "Health" ~ 20,
+                                  import_prob3 == "aids" ~ 21,
+                                  import_prob3 == "Sickness / Disease" ~ 22,
+                                  import_prob3 == "Crime and Security" ~ 23,
+                                  import_prob3 == "Corruption" ~ 24,
+                                  import_prob3 == "Political violence" ~ 25,
+                                  import_prob3 == "Political instability / ethnic tensions" ~ 26,
+                                  import_prob3 == "Discrimination/ inequality" ~ 27, 
+                                  import_prob3 == "Gender issues / womenâ€™s rights" ~ 28,
+                                  import_prob3 == "Democracy/political rights" ~ 29,
+                                  import_prob3 == "Civil war" ~ 31,
+                                  import_prob3 == "War (international)" ~ 30,
+                                  TRUE ~ 9999)) %>%
+           
   rename(election_fair = q23) %>%
   mutate(election_fair = case_when(election_fair == "Completely free and fair" ~ 4,
                                    election_fair == "Free and fair, but with minor problems" ~ 3,
@@ -123,15 +233,16 @@ d_2018 <- read.csv("raw_data/africabar_2018.csv") %>%
   
   select(year, country_code, respno, urban, gender, direction_country, current_eco,
          current_living, comp_living, looking_back, looking_ahead, pref_dem, extent_dem,
-         sat_dem, unfair, election_fair)
+         sat_dem, unfair, election_fair, import_prob1, import_prob2, import_prob3)
   
-#  rename(import_prob = q55) %>%
 #  rename(gov_handle = q56) %>%
 #  rename(corruption = q44) %>%
 
 ```
 
 ```{r}
+
+# reading in 2013 data 
 
 d_2013 <- read.csv("raw_data/africabar_2013.csv") %>%
   mutate(year = "2013") %>%
@@ -150,10 +261,13 @@ d_2013 <- read.csv("raw_data/africabar_2013.csv") %>%
   rename(sat_dem = q43) %>%
   rename(unfair = q56b) %>%
   rename(election_fair = q28) %>%
+  rename(import_prob1 = q63pt1) %>%
+  rename(import_prob2 = q63pt2) %>%
+  rename(import_prob3 = q63pt3) %>%
   
   select(year, country_code, respno, urban, gender, direction_country, current_eco,
          current_living, comp_living, looking_back, looking_ahead, pref_dem, extent_dem,
-         sat_dem, unfair, election_fair)
+         sat_dem, unfair, election_fair, import_prob1, import_prob2, import_prob3)
 
   
 #  rename(import_prob = q63) %>%
@@ -162,6 +276,8 @@ d_2013 <- read.csv("raw_data/africabar_2013.csv") %>%
 ```
 
 ```{r}
+
+#Joining the data from 2 years
 
 joined_data <- bind_rows(d_2018, d_2013) %>%
   mutate(country_code = case_when(country_code == "ALG" ~ "DZA",
@@ -212,6 +328,9 @@ list_countries <- unique(joined_data$country_code) %>%
 ```
 
 ```{r}
+
+# WB data for my countries 
+
 # Read in World Country code key. 
 
 wb_codes <- read_csv("raw_data/wb_country_codes_2.csv",
@@ -226,7 +345,7 @@ wb_codes <- read_csv("raw_data/wb_country_codes_2.csv",
   filter(continent_name == "Africa") %>%
   select(continent_name, continent_code, country_name, country_code) 
 
-# Read in World Bank population dataset. Left-join with WB country code key.
+# Read in World Bank population dataset.
 
 wb_pop <- read_csv("raw_data/wb_pop2.csv",
                 col_types = cols(.default = col_double(),
@@ -241,6 +360,8 @@ wb_pop <- read_csv("raw_data/wb_pop2.csv",
                values_to = "population",
                cols = c(x2013, x2018)) %>%
   mutate(year = str_replace(year, "x", ""))
+
+# reading in world bank gdp data
 
 wb_gdp <- read_csv("raw_data/wb_gdp2.csv",
                    col_types = cols(.default = col_double(),
@@ -265,6 +386,8 @@ wb_joined <- left_join(list_countries, wb_data_2, by = "country_code")
 ```
 
 ```{r interactive map}
+
+# Making the interactive map
 
 data(wrld_simpl) 
 
@@ -303,7 +426,9 @@ leaflet(world) %>%
 ```
 
 
-```{r direction of country graph welcome page}
+```{r}
+
+# Making the graphs for showing direction, year on year, and country by year
 
 direction <- joined_data %>%
   group_by(country_code, year) %>%
@@ -320,8 +445,8 @@ direction <- joined_data %>%
                                   direction_value,
                                   -1*direction_value)) 
 
-
 # direction for Africa 2013 vs 2018 
+
 direction_year_data <- direction %>%
   group_by(direction, year) %>%
   mutate(dirc_tot = sum(direction_value)/n()) %>%
@@ -342,6 +467,7 @@ direction_year_data %>%
 
 
 # Direction graph 2018 by country
+
 direction %>%
   filter(year == 2018) %>%
   ggplot(mapping = aes(x = country_code, y = direction_value, fill = direction)) +
@@ -356,6 +482,7 @@ direction %>%
        y = "percent of respondents") 
 
 #Direction graph 2013 by country
+
 direction %>%
   filter(year == 2013) %>%
   ggplot(mapping = aes(x = country_code, y = direction_value, fill = direction)) +
@@ -376,21 +503,12 @@ saveRDS(direction, file = "shiny/data/direction.rds")
 
 ```{r models economics/livelihood}
 
-# all countries, general direction economics and livelihood
-
-
-joined_data_2 <- joined_data %>%
-  drop_na() 
+# all countries, general direction economics and livelihood 2018
 
 dirc_2018 <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
                       urban + current_living + comp_living, 
-                      data = joined_data_2 %>% filter(year == 2018),
+                      data = joined_data %>% filter(year == 2018),
                       refresh = 0)
-
-dirc_2013 <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
-                          current_eco*looking_ahead + urban + current_living + comp_living, 
-                          data = joined_data %>% filter(year == 2013),
-                          refresh = 0)
 
 tbl_2018 <- tbl_regression(dirc_2018) %>%
   as_gt() %>%
@@ -398,17 +516,24 @@ tbl_2018 <- tbl_regression(dirc_2018) %>%
              subtitle= "The Effect of different variables on Direction") %>%
   tab_source_note("Afrobarometer") 
 
-tbl_2013 <- tbl_regression(dirc_2013) %>%d
+# all countries, general direction economics and livelihood 2013
+
+dirc_2013 <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
+                      urban + current_living + comp_living, 
+                      data = joined_data %>% filter(year == 2013),
+                      refresh = 0)
+
+tbl_2013 <- tbl_regression(dirc_2013) %>%
   as_gt() %>%
   tab_header(title = "Regression of belief of the Direction in which the country is going 2013",
              subtitle= "The Effect of different variables on Direction") %>%
   tab_source_note("Afrobarometer") 
   
-#functions to do for each country individually depending on what user selects
+# functions to do for each country individually depending on what user selects
 
 func_2018 <- function(a, b) {
   dirc_eco <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
-                       current_eco*looking_ahead + urban + current_living + comp_living, 
+                       urban + current_living + comp_living, 
                        data = joined_data %>% filter(country_code == a & year == b),
                        refresh = 0)
   tbl_dirc <- tbl_regression(dirc_eco) %>%
@@ -420,46 +545,8 @@ func_2018 <- function(a, b) {
   return(tbl_dirc)
 }
 
-  func_2018("ZAF", "2018")
-
-
-
 ```
 
-```{r models posterior}
-
-post_2018 <- dirc_2018 %>%
-  as_tibble() %>%
-  rename(mu = '(Intercept)')
-
-post_interval <- posterior_interval(dirc_2018, prob = 0.95)
-
-post_interval
-
-post_2018 %>%
-  ggplot(mapping = aes(x = mu)) +
-  geom_histogram(aes(y = after_stat(count/sum(count))),
-                 binwidth = 0.04,
-                 color = "white",
-                 fill = "lightsteelblue") +
-  geom_vline(xintercept = mean(post_2018$mu), 
-             lty = "solid", 
-             color= "red") +
-  geom_vline(xintercept = c(post_interval[1,1], post_interval[1,2]), 
-             lty = "solid", 
-             color= "dodgerblue") +
-  labs(title = "Posterior Probability Distribution",
-       subtitle = "Average course rating in Gov",
-       x = "Rating",
-        y = "Probability") +
-  theme_bw()
-
-
-
-
-  
-
-```
 
 
 
