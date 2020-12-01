@@ -12,7 +12,7 @@ library(readr)
 library(janitor)
 library(rgdal)
 library(tidyverse)
-
+library(maptools)
 ```
 
 
@@ -32,18 +32,16 @@ wb_codes <- read_csv("raw_data/wb_country_codes_2.csv",
 
 # Read in World Bank population dataset. Left-join with WB country code key.
 
-pop <- read_csv("raw_data/wb_pop2.csv") %>%
+pop <- read_csv("raw_data/wb_pop2.csv",
+                col_types = cols(.default = col_double(),
+                                `Country Name` = col_character(),
+                                `Country Code` = col_character(),
+                                `Indicator Name` = col_character(),
+                                `Indicator Code` = col_character(),
+                                `2020` = col_logical())) %>%
   clean_names %>%
-  select(c(country_code, x2019)) 
-#  joined <- left_join(wb_codes, by = c("country_code" = "country_code"))
-
-
-
-basins_geometry <- readOGR("raw_data/geometry/wb_major_basins", layer = "Major_Basins_of_the_World")
-
-basins_geometry
-
-countries_geometry <- readOGR("raw_data/geometry/countries_wgs84", layer = "countries_WGS84")
+  select(country_code, x2013, x2018) %>%
+  left_join(wb_codes, by = c("country_code" = "country_code"))
 
 
 ```

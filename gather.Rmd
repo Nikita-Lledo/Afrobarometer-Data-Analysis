@@ -18,14 +18,22 @@ library(rgeos)
 library(leaflet)
 library(htmltools)
 library(maptools)
+library(janitor)
+library(rstanarm)
+library(rgdal)
+library(viridis)
+library(gtsummary)
+library(broom.mixed)
+library(gt)
 ```
 
 
 ```{r}
+
 d_2018 <- read.csv("raw_data/africabar_2018.csv") %>%
   mutate(year = "2018") %>%
   clean_names() %>%
-  mutate(country_code = toupper(str_sub(country, 1, 3))) %>%
+  mutate(country_code = toupper(str_sub(respno, 1, 3))) %>%
   
   rename(urban = urbrur) %>%
   mutate(urban = ifelse(urban == "Rural", 2, 1)) %>%
@@ -77,16 +85,55 @@ d_2018 <- read.csv("raw_data/africabar_2018.csv") %>%
                                    TRUE ~ 9)) %>%
   
   rename(pref_dem = q28) %>%
+  mutate(pref_dem = case_when(pref_dem == "STATEMENT 3: Doesn't matter" ~ 1,
+                              pref_dem == "STATEMENT 2: Sometimes non-democratic preferable" ~ 2,
+                              pref_dem == "STATEMENT 1: Democracy preferable" ~ 3,
+                              TRUE ~ 9)) %>%
+  
   rename(extent_dem = q35) %>%
+  mutate(extent_dem = case_when(extent_dem == "A full democracy" ~ 4,
+                                extent_dem == "A democracy, but with minor problems" ~ 3, 
+                                extent_dem == "A democracy, with major problems" ~ 2, 
+                                extent_dem == "Not a democracy" ~ 1,
+                                extent_dem == "Do not understand question / democracy" ~ 8,
+                                TRUE ~ 9)) %>%
+  
   rename(sat_dem = q36) %>%
-  rename(import_prob = q55) %>%
-  rename(gov_handle = q56) %>%
-  rename(trust = q43) %>%
-  rename(corruption = q44) %>%
+  mutate(sat_dem = case_when(sat_dem == "Very satisfied" ~ 4,
+                             sat_dem == "Fairly satisfied" ~ 3,
+                             sat_dem == "Not very satisfied" ~ 2,
+                             sat_dem == "Not at all satisfied" ~ 1,
+                             sat_dem == "The country is not a democracy" ~ 0,
+                             TRUE ~ 9)) %>%
+  
   rename(unfair = q42d) %>%
-  rename(electon_fair = q23) %>%
+  mutate(unfair = case_when(unfair == "Always" ~ 3,
+                            unfair == "Often" ~ 2,
+                            unfair == "Rarely" ~ 1,
+                            unfair == "Never" ~ 0,
+                            TRUE ~ 9)) %>%
+  
+  rename(election_fair = q23) %>%
+  mutate(election_fair = case_when(election_fair == "Completely free and fair" ~ 4,
+                                   election_fair == "Free and fair, but with minor problems" ~ 3,
+                                   election_fair == "Free and fair, but with major problems" ~ 2,
+                                   election_fair == "Not free and fair" ~ 1,
+                                   election_fair == "Do not understand question" ~ 8,
+                                   TRUE ~ 9)) %>%
+  
+  select(year, country_code, respno, urban, gender, direction_country, current_eco,
+         current_living, comp_living, looking_back, looking_ahead, pref_dem, extent_dem,
+         sat_dem, unfair, election_fair)
+  
+#  rename(import_prob = q55) %>%
+#  rename(gov_handle = q56) %>%
+    
+  
+#  rename(trust_a = q43a) %>%
+#  trust_ass(function use here).
 
-
+#  rename(corruption = q44) %>%
+  
 # saveRDS(d_2018, file = "shiny/data/d_2018.rds")
 
 # saveRDS(d_2013, file = "shiny/data/d_2013.rds")
@@ -97,7 +144,7 @@ d_2018 <- read.csv("raw_data/africabar_2018.csv") %>%
 d_2013 <- read.csv("raw_data/africabar_2013.csv") %>%
   mutate(year = "2013") %>%
   clean_names() %>%
-  mutate(country_code = toupper(str_sub(country, 1, 3))) %>%  
+  mutate(country_code = toupper(str_sub(respno, 1, 3))) %>%  
   rename(urban = urbrur) %>%
   rename(gender = thisint) %>%
   rename(current_eco = q3a) %>%
@@ -109,15 +156,271 @@ d_2013 <- read.csv("raw_data/africabar_2013.csv") %>%
   rename(pref_dem = q32) %>%
   rename(extent_dem = q42) %>%
   rename(sat_dem = q43) %>%
-  rename(import_prob = q63) %>%
-  rename(gov_handle = q65) %>%
-  rename(trust = q59) %>%
-  rename(corruption = q60) %>%
   rename(unfair = q56b) %>%
-  rename(election_fair = q28)
+  rename(election_fair = q28) %>%
   
-
+  select(year, country_code, respno, urban, gender, direction_country, current_eco,
+         current_living, comp_living, looking_back, looking_ahead, pref_dem, extent_dem,
+         sat_dem, unfair, election_fair)
 
   
+#  rename(import_prob = q63) %>%
+ # rename(gov_handle = q65) %>%
+#  rename(trust = q59) %>%
+#  rename(corruption = q60) 
+
 ```
+
+```{r}
+
+joined_data <- bind_rows(d_2018, d_2013)
+
+```
+
+```{r}
+
+joined_data <- joined_data %>%
+  mutate(country_code = case_when(country_code == "ALG" ~ "DZA",
+                                  country_code == "BFO" ~ "BFA",
+                                  country_code == "BOT" ~ "BWA",
+                                  country_code == "CAM" ~ "CMR",
+                                  country_code == "CDI" ~ "CIV",
+                                  country_code == "CVE" ~ "CPV",
+                                  country_code == "GUI" ~ "GIN",
+                                  country_code == "LES" ~ "LSO",
+                                  country_code == "LIB" ~"LBR",
+                                  country_code == "MAD" ~ "MDG",
+                                  country_code == "MAU" ~ "MUS",
+                                  country_code == "MLW" ~ "MWI",
+                                  country_code == "NGR" ~ "NER",
+                                  country_code == "GAM" ~ "GMB",
+                                  country_code == "MOR" ~ "MAR",
+                                  country_code == "NIG" ~ "NGA",
+                                  country_code == "SAF" ~ "ZAF",
+                                  country_code == "ZIM" ~ "ZWE",
+                                  country_code == "ZAM" ~ "ZMB",
+                                  country_code == "TOG" ~ "TGO",
+                                  country_code == "TAN" ~ "TZA",
+                                  country_code == "SUD" ~ "SDN",
+                                  country_code == "SRL" ~ "SLE",
+                                  country_code == "MRC" ~ "MAR",
+                                  TRUE ~ country_code)) 
+
+list_countries <- unique(joined_data$country_code) %>%
+  as_tibble() %>%
+  rename(country_code = value)
+
+```
+
+```{r}
+# Read in World Country code key. 
+
+wb_codes <- read_csv("raw_data/wb_country_codes_2.csv",
+                     col_types = cols(Continent_Name = col_character(),
+                                      Continent_Code = col_character(),
+                                      Country_Name = col_character(),
+                                      Two_Letter_Country_Code = col_character(),
+                                      Three_Letter_Country_Code = col_character(),
+                                      Country_Number = col_double())) %>%
+  clean_names() %>%
+  mutate(country_code = three_letter_country_code) %>%
+  filter(continent_name == "Africa") %>%
+  select(continent_name, continent_code, country_name, country_code) 
+  
+
+# Read in World Bank population dataset. Left-join with WB country code key.
+
+wb_pop <- read_csv("raw_data/wb_pop2.csv",
+                col_types = cols(.default = col_double(),
+                                `Country Name` = col_character(),
+                                `Country Code` = col_character(),
+                                `Indicator Name` = col_character(),
+                                `Indicator Code` = col_character(),
+                                `2020` = col_logical())) %>%
+  clean_names %>%
+  select(country_code, x2013, x2018) %>%
+  pivot_longer(names_to = "year",
+               values_to = "population",
+               cols = c(x2013, x2018)) %>%
+  mutate(year = str_replace(year, "x", ""))
+
+wb_gdp <- read_csv("raw_data/wb_gdp2.csv",
+                   col_types = cols(.default = col_double(),
+                                    `Country Name` = col_character(),
+                                    `Country Code` = col_character(),
+                                    `Indicator Name` = col_character(),
+                                    `Indicator Code` = col_character(),
+                                    `2020` = col_logical())) %>%
+  clean_names %>%
+  select(country_code, x2013, x2018) %>%
+  pivot_longer(names_to = "year",
+               values_to = "gdp",
+               cols = c(x2013, x2018)) %>%
+  mutate(year = str_replace(year, "x", ""))
+  
+wb_data <- left_join(wb_pop, wb_gdp, by = c("country_code", "year"))
+
+wb_data_2 <- left_join(wb_codes, wb_data, by = "country_code")
+
+wb_joined <- left_join(list_countries, wb_data_2, by = "country_code")
+
+```
+
+```{r interactive map}
+
+data(wrld_simpl) 
+
+world <- wrld_simpl 
+
+direction <- joined_data %>%
+  group_by(country_code, year) %>%
+  drop_na() %>%
+  mutate(num_resp = n()) %>%
+  mutate(wrong = sum(direction_country == 1)/num_resp*100) %>%
+  mutate(right = sum(direction_country == 2)/num_resp*100) %>%
+  select(country_code, year, wrong, right, num_resp) %>%
+  unique() %>%
+  pivot_longer(names_to = "direction",
+               values_to = "direction_value",
+               cols = c(wrong, right)) %>%
+  mutate(direction_value = ifelse(direction == "right",
+                                  direction_value,
+                                  -1*direction_value)) 
+
+direction_map_data <- direction %>%
+  group_by(country_code)%>%
+  mutate(direction_tot = sum(direction_value)/2) %>%
+  select(country_code, direction_tot, year) %>%
+  unique()
+
+direction_map <- left_join(direction_map_data, wb_joined, by = c("country_code", "year")) %>%
+  filter(year == "2018")
+
+pal <- colorNumeric(palette = "Blues",
+                    domain = world$direction_tot)
+
+world@data <- wrld_simpl@data %>%
+  left_join(direction_map, by = c("ISO3" = "country_code"))
+
+leaflet(world) %>%
+  setView(lng = 10.0383, lat = 5.7587, zoom = 2.25) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(popup = paste("Country:", world$country_name, "<br>",
+                            "Population:", world$population, "<br>",
+                            "GDP:", round(world$gdp, digits = 2)),
+              stroke = FALSE, smoothFactor = 0.2, fillOpacity = 1,
+              color = ~pal(direction_tot)) %>%
+  addLegend("bottomright", pal = pal, values = ~direction_tot,
+            title = "Direction in which the \n country is moving (2018)",
+            opacity = 1)
+
+```
+
+
+```{r direction of country graph welcome page}
+
+# direction for Africa 2013 vs 2018 
+direction_year_data <- direction %>%
+  group_by(direction, year) %>%
+  mutate(dirc_tot = sum(direction_value)/n()) %>%
+  select(year, dirc_tot, direction) %>%
+  unique() 
+
+direction_year_data %>%
+  ggplot(mapping = aes(x = year, y = dirc_tot, fill = direction)) +
+  geom_bar(stat = "identity") +
+  geom_hline(yintercept = 0) +
+  theme_bw() +
+  ylim(-75, 75) +
+  coord_flip() +
+  scale_fill_manual(values = c("steelblue", "lightsteelblue")) +
+  labs(title = "Direction in which repspondents believe the country is going",
+       x = "year",
+       y = "percent of respondents")
+
+
+# Direction graph 2018 by country
+direction %>%
+  filter(year == 2018) %>%
+  ggplot(mapping = aes(x = country_code, y = direction_value, fill = direction)) +
+  geom_bar(stat = "identity") +
+  geom_hline(yintercept = 0) +
+  theme_bw() +
+  ylim(-90, 90) +
+  coord_flip() +
+  scale_fill_manual(values = c("steelblue", "lightsteelblue")) +
+  labs(title = "Direction in which repspondents believe the country is going",
+       x = "country",
+       y = "percent of respondents") 
+
+#Direction graph 2013 by country
+direction %>%
+  filter(year == 2013) %>%
+  ggplot(mapping = aes(x = country_code, y = direction_value, fill = direction)) +
+  geom_bar(stat = "identity") +
+  geom_hline(yintercept = 0) +
+  theme_bw() +
+  ylim(-90, 90) +
+  coord_flip() +
+  scale_fill_manual(values = c("steelblue", "lightsteelblue")) +
+  labs(title = "Direction in which repspondents believe the country is going",
+       x = "country",
+       y = "percent of respondents")
+
+
+```
+
+```{r models economics/livelihood}
+
+# all countries, general direction economics and livelihood
+
+dirc_2018 <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
+                          current_eco*looking_ahead + urban + current_living + comp_living, 
+                          data = joined_data %>% filter(year == 2018),
+                          refresh = 0)
+
+dirc_2013 <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
+                          current_eco*looking_ahead + urban + current_living + comp_living, 
+                          data = joined_data %>% filter(year == 2013),
+                          refresh = 0)
+
+#functions to do for each country individually depending on what user selects
+
+func_2018 <- function(x, y) {
+  dirc_eco <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
+                       current_eco*looking_ahead + + urban + current_living + comp_living, 
+                       data = joined_data %>% filter(country_code == x & year == y),
+                       refresh = 0)
+}
+
+tbl_2018 <- tbl_regression(dirc_2018) %>%
+  as_gt() %>%
+  tab_header(title = "Regression of Congressional Ideology",
+             subtitle= "The Effect of Party on DW-NOMINATE Percentile") %>%
+  tab_source_note("Source: https://voteview.com/data") 
+
+tbl_2013 <- tbl_regression(dirc_2013) %>%
+  as_gt() %>%
+  tab_header(title = "Regression of Congressional Ideology",
+             subtitle= "The Effect of Party on DW-NOMINATE Percentile") %>%
+  tab_source_note("Source: https://voteview.com/data") 
+
+```
+
+```{r models posterior}
+
+new_obs <- tibble(current_eco = c("1", "2", "3", "4"))
+
+# Using posterior_predict to get posterior draws for each party using the 
+# model we created in the previous question and entering it into our new tibble
+# we rename the the columns for simplicity of interpretation. 
+
+direction_posterior <- posterior_predict(dirc_2018, newdata = new_obs) %>%
+  as_tibble() %>%
+  mutate_all(as.numeric) 
+
+```
+
+
+
 
