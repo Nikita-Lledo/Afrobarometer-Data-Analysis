@@ -1,83 +1,152 @@
-x <- readRDS(file = "data/d_2018.rds")
+x <- readRDS(file = "data/direction.rds")
+y <- readRDS(file = "data/joined_data.rds")
+world <- readRDS(file = "data/world.rds")
 
 
-library(shiny)
-library(shinythemes)
 library(tidyverse)
+library(readxl)
+library(ggthemes)
+library(sf)
+library(ggplot2)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(rgeos)
+library(leaflet)
+library(htmltools)
+library(maptools)
+library(janitor)
+library(rstanarm)
+library(rgdal)
+library(viridis)
+library(gtsummary)
+library(broom.mixed)
+library(gt)
 
 # Define server logic required to draw a histogram
 
 
 shinyServer(function(input, output) {
-
-    output$news <- renderPlot({
-        
-        news <-  x %>%
-            select(Q12A, Q12B, Q12C, Q12D, Q12E)
-        
-        news_pivot <- news %>%
-            pivot_longer(cols = c(Q12A, Q12B, Q12C, Q12D, Q12E),
-                         names_to = "news_source",
-                         values_to = "frequency") %>%
-            group_by(news_source) %>%
-            drop_na() %>%
-            summarize(never = (sum(frequency == "Never")/n())*100, 
-                      less_once = (sum(frequency == "Less than once a month")/n())*100, 
-                      few_month = (sum(frequency == "A few times a month")/n())*100,
-                      few_week = (sum(frequency =="A few times a week")/n())*100,
-                      every = (sum(frequency == "Every day")/n())*100, 
-                      .groups = "drop") 
-        
-        news_final <- news_pivot %>%
-            pivot_longer(cols = c(never, less_once, few_month, few_week, every),
-                         names_to = "freq_name",
-                         values_to = "freq_num") %>%
-            group_by(news_source)
-        
-        news_final %>%
-            ggplot(mapping = aes(x = freq_name, y = freq_num, fill = news_source)) +
-            geom_col(position = "dodge") +
-            labs(title = "Percentage of all respondants and the frequency of which the 
-                engage various media sources",
-                 x = "Frequency",
-                 y = "Percentage of Respondants (%)") +
-            scale_fill_manual(name = "News Source", 
-                              labels = c("Radio", "Television", "Newspaper", "Internet",
-                                         "Social Media"),
-                              values = c("blue", "green", "red", "orange", "pink")) +
-            scale_x_discrete(labels = c("Every day",
-                                        "A few times \n a month",
-                                        "A few times \n a week",
-                                        "Less than once \n a month",
-                                        "Never")) +
-            theme_bw()
-        
-    })
     
-    output$resp <- renderPlot ({
-        
-        pop2018 <- x %>% 
-            select(country, respno) %>%
-            group_by(country) %>%
-            summarize(num_resp = n(), .groups = "drop") 
-        
-        world <- ne_countries(scale = "medium", returnclass = "sf")
-        
-        pop_map2018 <- left_join(world, pop2018, by = c("sovereignt" = "country"))
-        
-        pop_map2018 %>%
-            rename("Respondents" = num_resp) %>%
+    output$direction <- renderPlot({
+        if(input$plotInput == "year") {
+            direction_year_data <- x %>%
+                group_by(direction, year) %>%
+                mutate(dirc_tot = sum(direction_value)/n()) %>%
+                select(year, dirc_tot, direction) %>%
+                unique() 
             
-            ggplot() + 
-            geom_sf(aes(fill = Respondents)) +
-            scale_fill_viridis_c(option = "plasma", trans = "sqrt") +
-            coord_sf(crs = st_crs(3035)) +
-            labs(title = "Heat map showing the number of respondants in 2018")
+            direction_year_data %>%
+                ggplot(mapping = aes(x = year, y = dirc_tot, fill = direction)) +
+                geom_bar(stat = "identity") +
+                geom_hline(yintercept = 0) +
+                theme_bw() +
+                ylim(-75, 75) +
+                coord_flip() +
+                scale_fill_manual(values = c("steelblue", "lightsteelblue")) +
+                labs(title = "Direction in which repspondents believe the country is going",
+                     x = "year",
+                     y = "percent of respondents")
+        } else {
+            if(input$plotInput == "2018"){
+                x %>%
+                    filter(year == 2018) %>%
+                    ggplot(mapping = aes(x = country_code, y = direction_value, fill = direction)) +
+                    geom_bar(stat = "identity") +
+                    geom_hline(yintercept = 0) +
+                    theme_bw() +
+                    ylim(-90, 90) +
+                    coord_flip() +
+                    scale_fill_manual(values = c("steelblue", "lightsteelblue")) +
+                    labs(title = "Direction in which repspondents believe the country is going",
+                         x = "country",
+                         y = "percent of respondents") }
+            else {
+            x %>%
+                filter(year == 2013) %>%
+                ggplot(mapping = aes(x = country_code, y = direction_value, fill = direction)) +
+                geom_bar(stat = "identity") +
+                geom_hline(yintercept = 0) +
+                theme_bw() +
+                ylim(-90, 90) +
+                coord_flip() +
+                scale_fill_manual(values = c("steelblue", "lightsteelblue")) +
+                labs(title = "Direction in which repspondents believe the country is going",
+                     x = "country",
+                     y = "percent of respondents")             
+            
+        } }
         
-    
+        
     })
+    
 
+  output$map <- renderLeaflet({
+      
+        pal <- colorNumeric(palette = "Blues",
+                           domain = world$direction_tot)
+        
+       leaflet(world) %>%
+            setView(lng = 10.0383, lat = 5.7587, zoom = 2.25) %>%
+            addProviderTiles("CartoDB.Positron") %>%
+            addPolygons(popup = paste("Country:", world$country_name, "<br>",
+                                      "Population:", world$population, "<br>",
+                                      "GDP:", round(world$gdp, digits = 2)),
+                        stroke = FALSE, smoothFactor = 0.2, fillOpacity = 1,
+                        color = ~pal(direction_tot)) %>%
+            addLegend("bottomright", pal = pal, values = ~direction_tot,
+                      title = "Direction (2018)",
+                      opacity = 1)
+    })
+  
+  output$tbl_2018 <- render_gt ({
+
+      dirc_2018 <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
+                                urban + current_living + comp_living, 
+                           data = y %>% filter(year == 2018),
+                          refresh = 0)
+      
+      tbl_regression(dirc_2018) %>%
+          as_gt() %>%
+         tab_header(title = "Regression of belief of the Direction in which the country is going 2018",
+                    subtitle= "The Effect of different variables on Direction") %>%
+        tab_source_note("Afrobarometer") 
+      
+  })
+
+  output$tbl_2013 <- render_gt ({
+      
+      dirc_2013 <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
+                                urban + current_living + comp_living, 
+                            data = y %>% filter(year == 2013),
+                            refresh = 0)
+      
+      tbl_regression(dirc_2013) %>%
+          as_gt() %>%
+          tab_header(title = "Regression of belief of the Direction in which the country is going 2013",
+                     subtitle= "The Effect of different variables on Direction") %>%
+          tab_source_note("Afrobarometer") 
+      
+  })  
+  
+  
+  output$regression_country <- render_gt ({
+      dirc_eco <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
+                               current_eco*looking_ahead + urban + current_living + comp_living, 
+                           data = y %>% filter(country_code == input$reg_country & year == input$reg_year),
+                           refresh = 0)
+      tbl_dirc <- tbl_regression(dirc_eco) %>%
+          as_gt() %>%
+          tab_header(title = "Regression of belief of the Direction in which the country is going",
+                     subtitle= "The Effect of different variables on Direction") %>%
+          tab_source_note("Afrobarometer") 
+  })
+      
+     
+      
+    
 })
+
+
 
 
 

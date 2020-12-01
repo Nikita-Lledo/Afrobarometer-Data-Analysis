@@ -127,20 +127,12 @@ d_2018 <- read.csv("raw_data/africabar_2018.csv") %>%
   
 #  rename(import_prob = q55) %>%
 #  rename(gov_handle = q56) %>%
-    
-  
-#  rename(trust_a = q43a) %>%
-#  trust_ass(function use here).
-
 #  rename(corruption = q44) %>%
-  
-# saveRDS(d_2018, file = "shiny/data/d_2018.rds")
-
-# saveRDS(d_2013, file = "shiny/data/d_2013.rds")
 
 ```
 
 ```{r}
+
 d_2013 <- read.csv("raw_data/africabar_2013.csv") %>%
   mutate(year = "2013") %>%
   clean_names() %>%
@@ -165,21 +157,13 @@ d_2013 <- read.csv("raw_data/africabar_2013.csv") %>%
 
   
 #  rename(import_prob = q63) %>%
- # rename(gov_handle = q65) %>%
-#  rename(trust = q59) %>%
-#  rename(corruption = q60) 
+#  rename(gov_handle = q65) %>%
 
 ```
 
 ```{r}
 
-joined_data <- bind_rows(d_2018, d_2013)
-
-```
-
-```{r}
-
-joined_data <- joined_data %>%
+joined_data <- bind_rows(d_2018, d_2013) %>%
   mutate(country_code = case_when(country_code == "ALG" ~ "DZA",
                                   country_code == "BFO" ~ "BFA",
                                   country_code == "BOT" ~ "BWA",
@@ -205,6 +189,21 @@ joined_data <- joined_data %>%
                                   country_code == "SRL" ~ "SLE",
                                   country_code == "MRC" ~ "MAR",
                                   TRUE ~ country_code)) 
+  
+joined_data$urban[joined_data$urban == 9] <- NA
+joined_data$gender[joined_data$gender == 9] <- NA
+joined_data$current_eco[joined_data$current_eco == 9] <- NA
+joined_data$current_living[joined_data$current_living == 9] <- NA
+joined_data$comp_living[joined_data$comp_living == 9] <- NA
+joined_data$looking_back[joined_data$looking_back == 9] <- NA
+joined_data$looking_ahead[joined_data$looking_ahead == 9] <- NA
+joined_data$direction_country[joined_data$direction_country == 9] <- NA
+joined_data$pref_dem[joined_data$pref_dem == 9] <- NA
+joined_data$extent_dem[joined_data$extent_dem == 9] <- NA
+joined_data$sat_dem[joined_data$sat_dem == 9] <- NA
+joined_data$unfair[joined_data$unfair == 9] <- NA
+
+saveRDS(joined_data, file = "shiny/data/joined_data.rds")
 
 list_countries <- unique(joined_data$country_code) %>%
   as_tibble() %>%
@@ -226,7 +225,6 @@ wb_codes <- read_csv("raw_data/wb_country_codes_2.csv",
   mutate(country_code = three_letter_country_code) %>%
   filter(continent_name == "Africa") %>%
   select(continent_name, continent_code, country_name, country_code) 
-  
 
 # Read in World Bank population dataset. Left-join with WB country code key.
 
@@ -257,11 +255,11 @@ wb_gdp <- read_csv("raw_data/wb_gdp2.csv",
                values_to = "gdp",
                cols = c(x2013, x2018)) %>%
   mutate(year = str_replace(year, "x", ""))
+
+# joining sequence 
   
 wb_data <- left_join(wb_pop, wb_gdp, by = c("country_code", "year"))
-
 wb_data_2 <- left_join(wb_codes, wb_data, by = "country_code")
-
 wb_joined <- left_join(list_countries, wb_data_2, by = "country_code")
 
 ```
@@ -272,9 +270,44 @@ data(wrld_simpl)
 
 world <- wrld_simpl 
 
-direction <- joined_data %>%
+direction_map_data <- joined_data %>%
   group_by(country_code, year) %>%
   drop_na() %>%
+  mutate(direction_tot = sum(direction_country)/n()-1) %>%
+  select(country_code, direction_tot, year) %>%
+  unique() %>%
+  left_join(wb_joined, by = c("country_code", "year")) %>%
+  filter(year == "2018")
+  
+world@data <- wrld_simpl@data %>%
+  left_join(direction_map_data, by = c("ISO3" = "country_code"))
+  
+  
+pal <- colorNumeric(palette = "Blues",
+                    domain = world$direction_tot)
+
+saveRDS(world, file = "shiny/data/world.rds")
+
+leaflet(world) %>%
+  setView(lng = 10.0383, lat = 5.7587, zoom = 2.25) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(popup = paste("Country:", world$country_name, "<br>",
+                            "Population:", world$population, "<br>",
+                            "GDP:", round(world$gdp, digits = 2)),
+              stroke = FALSE, smoothFactor = 0.2, fillOpacity = 1,
+              color = ~pal(direction_tot)) %>%
+  addLegend("bottomright", pal = pal, values = ~direction_tot,
+            title = "Direction (2018)",
+            opacity = 1)
+
+```
+
+
+```{r direction of country graph welcome page}
+
+direction <- joined_data %>%
+  group_by(country_code, year) %>%
+  drop_na(direction_country) %>%
   mutate(num_resp = n()) %>%
   mutate(wrong = sum(direction_country == 1)/num_resp*100) %>%
   mutate(right = sum(direction_country == 2)/num_resp*100) %>%
@@ -287,37 +320,6 @@ direction <- joined_data %>%
                                   direction_value,
                                   -1*direction_value)) 
 
-direction_map_data <- direction %>%
-  group_by(country_code)%>%
-  mutate(direction_tot = sum(direction_value)/2) %>%
-  select(country_code, direction_tot, year) %>%
-  unique()
-
-direction_map <- left_join(direction_map_data, wb_joined, by = c("country_code", "year")) %>%
-  filter(year == "2018")
-
-pal <- colorNumeric(palette = "Blues",
-                    domain = world$direction_tot)
-
-world@data <- wrld_simpl@data %>%
-  left_join(direction_map, by = c("ISO3" = "country_code"))
-
-leaflet(world) %>%
-  setView(lng = 10.0383, lat = 5.7587, zoom = 2.25) %>%
-  addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(popup = paste("Country:", world$country_name, "<br>",
-                            "Population:", world$population, "<br>",
-                            "GDP:", round(world$gdp, digits = 2)),
-              stroke = FALSE, smoothFactor = 0.2, fillOpacity = 1,
-              color = ~pal(direction_tot)) %>%
-  addLegend("bottomright", pal = pal, values = ~direction_tot,
-            title = "Direction in which the \n country is moving (2018)",
-            opacity = 1)
-
-```
-
-
-```{r direction of country graph welcome page}
 
 # direction for Africa 2013 vs 2018 
 direction_year_data <- direction %>%
@@ -367,6 +369,8 @@ direction %>%
        x = "country",
        y = "percent of respondents")
 
+saveRDS(direction, file = "shiny/data/direction.rds")
+
 
 ```
 
@@ -374,50 +378,86 @@ direction %>%
 
 # all countries, general direction economics and livelihood
 
+
+joined_data_2 <- joined_data %>%
+  drop_na() 
+
 dirc_2018 <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
-                          current_eco*looking_ahead + urban + current_living + comp_living, 
-                          data = joined_data %>% filter(year == 2018),
-                          refresh = 0)
+                      urban + current_living + comp_living, 
+                      data = joined_data_2 %>% filter(year == 2018),
+                      refresh = 0)
 
 dirc_2013 <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
                           current_eco*looking_ahead + urban + current_living + comp_living, 
                           data = joined_data %>% filter(year == 2013),
                           refresh = 0)
 
-#functions to do for each country individually depending on what user selects
-
-func_2018 <- function(x, y) {
-  dirc_eco <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
-                       current_eco*looking_ahead + + urban + current_living + comp_living, 
-                       data = joined_data %>% filter(country_code == x & year == y),
-                       refresh = 0)
-}
-
 tbl_2018 <- tbl_regression(dirc_2018) %>%
   as_gt() %>%
-  tab_header(title = "Regression of Congressional Ideology",
-             subtitle= "The Effect of Party on DW-NOMINATE Percentile") %>%
-  tab_source_note("Source: https://voteview.com/data") 
+  tab_header(title = "Regression of belief of the Direction in which the country is going 2018",
+             subtitle= "The Effect of different variables on Direction") %>%
+  tab_source_note("Afrobarometer") 
 
-tbl_2013 <- tbl_regression(dirc_2013) %>%
+tbl_2013 <- tbl_regression(dirc_2013) %>%d
   as_gt() %>%
-  tab_header(title = "Regression of Congressional Ideology",
-             subtitle= "The Effect of Party on DW-NOMINATE Percentile") %>%
-  tab_source_note("Source: https://voteview.com/data") 
+  tab_header(title = "Regression of belief of the Direction in which the country is going 2013",
+             subtitle= "The Effect of different variables on Direction") %>%
+  tab_source_note("Afrobarometer") 
+  
+#functions to do for each country individually depending on what user selects
+
+func_2018 <- function(a, b) {
+  dirc_eco <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
+                       current_eco*looking_ahead + urban + current_living + comp_living, 
+                       data = joined_data %>% filter(country_code == a & year == b),
+                       refresh = 0)
+  tbl_dirc <- tbl_regression(dirc_eco) %>%
+  as_gt() %>%
+  tab_header(title = "Regression of belief of the Direction in which the country is going",
+             subtitle= "The Effect of different variables on Direction") %>%
+  tab_source_note("Afrobarometer") 
+  
+  return(tbl_dirc)
+}
+
+  func_2018("ZAF", "2018")
+
+
 
 ```
 
 ```{r models posterior}
 
-new_obs <- tibble(current_eco = c("1", "2", "3", "4"))
-
-# Using posterior_predict to get posterior draws for each party using the 
-# model we created in the previous question and entering it into our new tibble
-# we rename the the columns for simplicity of interpretation. 
-
-direction_posterior <- posterior_predict(dirc_2018, newdata = new_obs) %>%
+post_2018 <- dirc_2018 %>%
   as_tibble() %>%
-  mutate_all(as.numeric) 
+  rename(mu = '(Intercept)')
+
+post_interval <- posterior_interval(dirc_2018, prob = 0.95)
+
+post_interval
+
+post_2018 %>%
+  ggplot(mapping = aes(x = mu)) +
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 binwidth = 0.04,
+                 color = "white",
+                 fill = "lightsteelblue") +
+  geom_vline(xintercept = mean(post_2018$mu), 
+             lty = "solid", 
+             color= "red") +
+  geom_vline(xintercept = c(post_interval[1,1], post_interval[1,2]), 
+             lty = "solid", 
+             color= "dodgerblue") +
+  labs(title = "Posterior Probability Distribution",
+       subtitle = "Average course rating in Gov",
+       x = "Rating",
+        y = "Probability") +
+  theme_bw()
+
+
+
+
+  
 
 ```
 
