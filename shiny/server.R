@@ -1,7 +1,19 @@
+# Server File 
+# Here we are calling the necessary rds files that we saved in from our 
+# gather.rmd
+
 x <- readRDS(file = "data/direction.rds")
 y <- readRDS(file = "data/joined_data.rds")
 world <- readRDS(file = "data/world.rds")
+cloud <- readRDS(file = "data/wordcloud.rds")
+direction <- readRDS(file = "data/direction_year_data.rds")
+tbl_2018 <- readRDS(file = "data/tbl_2018.rds")
+tbl_2013 <- readRDS(file = "data/tbl_2013.rds")
+sent_2018 <- readRDS(file = "data/sent_tot_2018.rds")
+sent_2013 <- readRDS(file = "data/sent_tot_2013.rds")
+stan <- readRDS(file = "data/joined_data_stan.rds")
 
+# Loading the necessary libraries. 
 
 library(tidyverse)
 library(readxl)
@@ -21,56 +33,70 @@ library(viridis)
 library(gtsummary)
 library(broom.mixed)
 library(gt)
+library(wordcloud2)
 
-# Define server logic required to draw a histogram
-
+# Creating the plots, tables, graphs and leaflets that will be outputted. 
 
 shinyServer(function(input, output) {
-    
+
+# direction is a graph that does a year 2018 to year 2013 aggregate continent 
+# comparison of the percentage of people who thought their respective country 
+# was going in the right direction vs the wrong direction in the user selects 
+# year. If the user selects a specific year i.e. 2018 or 2013 then a country 
+# by country graph showing the percentage of respondents thinking the country 
+# is going in the wrong direction vs the right direction is shown. Hence the 
+# nested if else statement. 
+      
     output$direction <- renderPlot({
         if(input$plotInput == "year") {
-            direction_year_data <- x %>%
-                group_by(direction, year) %>%
-                mutate(dirc_tot = sum(direction_value)/n()) %>%
-                select(year, dirc_tot, direction) %>%
-                unique() 
-            
-            direction_year_data %>%
-                ggplot(mapping = aes(x = year, y = dirc_tot, fill = direction)) +
+            direction %>%
+                ggplot(mapping = aes(x = year, 
+                                     y = dirc_tot, 
+                                     fill = direction)) +
                 geom_bar(stat = "identity") +
                 geom_hline(yintercept = 0) +
                 theme_bw() +
                 ylim(-75, 75) +
                 coord_flip() +
-                scale_fill_manual(values = c("steelblue", "lightsteelblue")) +
-                labs(title = "Direction in which repspondents believe the country is going",
+                scale_fill_manual(values = c("steelblue", 
+                                             "lightsteelblue")) +
+                labs(title = "Direction in which repspondents 
+                     believe the country is going",
                      x = "year",
                      y = "percent of respondents")
         } else {
             if(input$plotInput == "2018"){
                 x %>%
                     filter(year == 2018) %>%
-                    ggplot(mapping = aes(x = country_code, y = direction_value, fill = direction)) +
+                    ggplot(mapping = aes(x = country_code, 
+                                         y = direction_value, 
+                                         fill = direction)) +
                     geom_bar(stat = "identity") +
                     geom_hline(yintercept = 0) +
                     theme_bw() +
                     ylim(-90, 90) +
                     coord_flip() +
-                    scale_fill_manual(values = c("steelblue", "lightsteelblue")) +
-                    labs(title = "Direction in which repspondents believe the country is going",
+                    scale_fill_manual(values = c("steelblue", 
+                                                 "lightsteelblue")) +
+                    labs(title = "Direction in which repspondents 
+                         believe the country is going",
                          x = "country",
                          y = "percent of respondents") }
             else {
                 x %>%
                     filter(year == 2013) %>%
-                    ggplot(mapping = aes(x = country_code, y = direction_value, fill = direction)) +
+                    ggplot(mapping = aes(x = country_code, 
+                                         y = direction_value, 
+                                         fill = direction)) +
                     geom_bar(stat = "identity") +
                     geom_hline(yintercept = 0) +
                     theme_bw() +
                     ylim(-90, 90) +
                     coord_flip() +
-                    scale_fill_manual(values = c("steelblue", "lightsteelblue")) +
-                    labs(title = "Direction in which repspondents believe the country is going",
+                    scale_fill_manual(values = c("steelblue", 
+                                                 "lightsteelblue")) +
+                    labs(title = "Direction in which repspondents
+                         believe the country is going",
                          x = "country",
                          y = "percent of respondents")             
             
@@ -79,7 +105,8 @@ shinyServer(function(input, output) {
         
     })
     
-
+# Creating a leaflet with relevant information about each country in the data.
+    
   output$map <- renderLeaflet({
       pal <- colorNumeric(palette = "Blues",
                           domain = world$direction_tot)
@@ -96,50 +123,57 @@ shinyServer(function(input, output) {
                     opacity = 1)
     })
   
+# displaying the table of the regression analysis for 2018.  
+  
   output$tbl_2018 <- render_gt ({
-      dirc_2018 <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
-                            urban + current_living + comp_living, 
-                            data = y %>% filter(year == 2018),
-                            refresh = 0)
-      
-      tbl_regression(dirc_2018) %>%
-          as_gt() %>%
-          tab_header(title = "Regression of belief of the Direction in which the country is going 2018",
-                     subtitle= "The Effect of different variables on Direction") %>%
-          tab_source_note("Afrobarometer") 
-      
+      tbl_2018
   })
 
+# displaying the table for the regression analysis of 2013. 
+  
   output$tbl_2013 <- render_gt ({
-      dirc_2013 <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
-                            urban + current_living + comp_living, 
-                            data = y %>% filter(year == 2013),
-                            refresh = 0)
-      
-      tbl_regression(dirc_2013) %>%
-          as_gt() %>%
-          tab_header(title = "Regression of belief of the Direction in which the country is going 2013",
-                     subtitle= "The Effect of different variables on Direction") %>%
-          tab_source_note("Afrobarometer") 
-      
+      tbl_2013
   })  
   
+# displaying the regressional analysis for a user selected country and year.  
+  
   output$regression_country <- render_gt ({
-      dirc_eco <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
+      dirc_eco <- stan_glm(formula = direction_country ~ current_eco + 
+                             looking_back + looking_ahead +
                            urban + current_living + comp_living, 
-                           data = y %>% filter(country_code == input$reg_country & year == input$reg_year),
+                           data = stan %>% filter(country_code == input$reg_country 
+                                                  & year == input$reg_year),
+                           family = binomial,
                            refresh = 0)
       tbl_dirc <- tbl_regression(dirc_eco) %>%
           as_gt() %>%
-          tab_header(title = "Regression of belief of the Direction in which the country is going",
-                     subtitle= "The Effect of different variables on Direction") %>%
+          tab_header(title = "Regression of belief of the Direction 
+                     in which the country is going",
+                     subtitle= "The Effect of different 
+                     variables on Direction") %>%
           tab_source_note("Afrobarometer") 
   })
-      
-     
-      
+ 
+# Displaying a wordcloud of the issues that were the top three most important
+# issues to respondents in 2018. 
+  
+  output$wc_2018 <- renderWordcloud2 ({
+    wordcloud2(sent_2018, minRotation = -pi/6, maxRotation = -pi/6,
+               rotateRatio = 1)
+  })
+  
+# Displaying a wordcloud of the issues that were the top three most important
+# issues to respondents in 2013. 
+  
+  output$wc_2013 <- renderWordcloud2({
+    wordcloud2(sent_2013, minRotation = pi/6, maxRotation = pi/6,
+               rotateRatio = 1)
     
+  })
+  
+      
 })
+
 
 
 

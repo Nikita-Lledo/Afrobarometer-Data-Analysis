@@ -1,12 +1,6 @@
-#
 # This is the user-interface definition of a Shiny web application. You can
-# run the application by clicking 'Run App' above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
 
+# Loading the neccessary libraries. 
 
 library(shiny)
 library(shinythemes)
@@ -17,13 +11,21 @@ library(lubridate)
 library(stats)
 library(dplyr)
 library(gt)
+library(wordcloud2)
 
+# selecting the theme and the title of my project
 
 shinyUI(
   navbarPage(theme = shinytheme("yeti"),
              "Afrobarometer",
              
 ###### FIRST PAGE ###########
+
+# The first page gives background information. I use fluid page and fluid row
+# to organize my output into a 2x2 grid for user experience. 
+# I am allowing the user to select their input for the graph they would like to 
+# view for the direction of the country. I am also displaying a leaflet with 
+# relevant information for each country. 
              
              tabPanel(align = "center", "The Direction We Are Heading",
                       h2("Democracy and Africa: What Direction are we heading?"),
@@ -68,6 +70,11 @@ shinyUI(
 
 
 ##### SECOND PAGE ######
+
+# the second page gives an analysis and the results of a regression model for 
+# modelling the direction of the country. I do analysis and show the results for 
+# the aggreate of 2018 and 2013. I allow the user to then select the year and 
+# the country they would like to view results specfically for. 
 
              tabPanel(align = "center", "Modelling Direction",
                       h2("Modelling Direction"),
@@ -154,8 +161,32 @@ shinyUI(
                                   gt_output("regression_country")
                                   ))
                       ),
-     
+
 ######## THIRD PAGE #########
+
+# the third page shows two word clouds of the top three most important issues 
+# for each respondent across the continent for their respective country. 
+
+             tabPanel(align = "center", "Sentiment Cloud",
+                      h2("Sent Analysis"),
+                      p("what I have to say"),
+                      fluidPage(
+                        fluidRow(column(6,
+                                        h3("2018 Sentiment "),
+                                        p("sentiment 2018 write up"),
+                                        wordcloud2Output("wc_2018")
+                                        ),
+                                 column(6,
+                                        h3("2013 Sentiment "),
+                                        p("sentiment 2013 write up"),
+                                        wordcloud2Output("wc_2013")
+                                 )))),
+
+     
+######## FOURTH PAGE #########
+
+# the fourth page is an information page. offering infromation on my self, the 
+# data and additional information relevant to the project. 
 
              tabPanel(align = "center", "About Page", 
                       h2("Background Information"),
@@ -190,8 +221,7 @@ shinyUI(
                         Nikita loves learning about the world, hiking and scuba diving!"
                         ), 
                        a("nikitalledo@college.harvard.edu", href = "mailto:nikitalledo@college.harvard.edu"),
-                       "."
-                      )
+                       ".")
              )
 
 )

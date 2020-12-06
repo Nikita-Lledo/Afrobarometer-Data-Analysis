@@ -13,41 +13,65 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(readxl)
 library(ggthemes)
-library(sf)
-library(ggplot2)
-library(rnaturalearth)
-library(rnaturalearthdata)
-library(rgeos)
 library(leaflet)
-library(htmltools)
+library(tm)
+library(gtsummary)
 library(maptools)
 library(janitor)
 library(rstanarm)
-library(rgdal)
-library(viridis)
-library(gtsummary)
-library(broom.mixed)
 library(gt)
+library(wordcloud2)
+library(infer)
+
+library(sf)
+library(ggplot2)
+library(rgeos)
+library(htmltools)
+library(rgdal)
+library(broom.mixed)
+
 ```
 
 
 ```{r}
 
-# Reading and cleaning the 2018 data
+# Reading and cleaning the 2018 data.
+# We are adding a year column so that when we join the data we can 
+# differentiate between data per year once data across years is joined. 
+# I am joining two data sets, one from 2018 and one from 2013. I am renaming 
+# variables to match between the two datasets as well as recoding the 2018 
+# data to be numeric. 
 
 d_2018 <- read.csv("raw_data/africabar_2018.csv") %>%
   mutate(year = "2018") %>%
   clean_names() %>%
+  
+# we are creating a country code using the first three letters of the respondent 
+# ID. This is the same code between years. 
+  
   mutate(country_code = toupper(str_sub(respno, 1, 3))) %>%
+  
+# Urban gives 2 if respondent is in a rural area, gives 1 if respondent is from
+# a urban area. 
   
   rename(urban = urbrur) %>%
   mutate(urban = ifelse(urban == "Rural", 2, 1)) %>%
   
+# gender returns 2 if female and 1 if respondent was male. 
+  
   rename(gender = thisint) %>%
   mutate(gender = ifelse(gender == "Female", 2, 1)) %>%
   
+# direction in which in respondent believes the country is going. this is a 
+# binary variable that returns 2 if they believe the right direction, and 
+# returns 1 if they believe the wrong direction. 
+  
   rename(direction_country = q3) %>%
-  mutate(direction_country = ifelse(direction_country == "Going in the right direction", 2, 1)) %>%
+  mutate(direction_country = ifelse(direction_country == "Going in the right direction", 
+                                    2, 1)) %>%
+  
+# current_eco is what the respondent believes the state of the current economy 
+# to be. 
   
   rename(current_eco = q4a) %>%
   mutate(current_eco = case_when(current_eco == "Very good" ~ 5,
@@ -57,6 +81,9 @@ d_2018 <- read.csv("raw_data/africabar_2018.csv") %>%
                                  current_eco == "Very Bad" ~ 1,
                                  TRUE ~ 9)) %>%
   
+# current_living is what the respondent believes the state of their current 
+# living conditions to be. 
+  
   rename(current_living = q4b) %>%
   mutate(current_living = case_when(current_living == "Very good" ~ 5,
                                     current_living == "Fairly Good" ~ 4,
@@ -65,6 +92,9 @@ d_2018 <- read.csv("raw_data/africabar_2018.csv") %>%
                                     current_living == "Very Bad" ~ 1,
                                     TRUE ~ 9)) %>%
   
+# comp_living is how the respondent believes their living standards compare to 
+# that of others. 
+  
   rename(comp_living = q5) %>%
   mutate(comp_living = case_when(comp_living == "Much better" ~ 5,
                                  comp_living == "Better" ~ 4,
@@ -72,6 +102,9 @@ d_2018 <- read.csv("raw_data/africabar_2018.csv") %>%
                                  comp_living == "Worse" ~ 2,
                                  comp_living == "Much worse" ~ 1,
                                  TRUE ~ 9)) %>%
+
+# looking_back is what the respondent thinks of the economy currently compared 
+# to 12 months ago. 
   
   rename(looking_back = q6) %>%
   mutate(looking_back = case_when(looking_back == "Much better" ~ 5,
@@ -81,6 +114,9 @@ d_2018 <- read.csv("raw_data/africabar_2018.csv") %>%
                                   looking_back == "Much worse" ~ 1,
                                   TRUE ~ 9)) %>%
   
+# looking_ahead is what the respondent thinks the economy will look like in 12
+# months in comparison to the current economy. 
+  
   rename(looking_ahead = q7) %>%
   mutate(looking_ahead = case_when(looking_ahead == "Much better" ~ 5,
                                    looking_ahead == "Better" ~ 4,
@@ -89,11 +125,16 @@ d_2018 <- read.csv("raw_data/africabar_2018.csv") %>%
                                    looking_ahead == "Much worse" ~ 1,
                                    TRUE ~ 9)) %>%
   
+# pref_dem is the extent to which a respondent agrees with democracy. 
+  
   rename(pref_dem = q28) %>%
   mutate(pref_dem = case_when(pref_dem == "STATEMENT 3: Doesn't matter" ~ 1,
                               pref_dem == "STATEMENT 2: Sometimes non-democratic preferable" ~ 2,
                               pref_dem == "STATEMENT 1: Democracy preferable" ~ 3,
                               TRUE ~ 9)) %>%
+  
+# extent_dem is the extent to which the respondent believes their country is 
+# a democracy.
   
   rename(extent_dem = q35) %>%
   mutate(extent_dem = case_when(extent_dem == "A full democracy" ~ 4,
@@ -103,6 +144,9 @@ d_2018 <- read.csv("raw_data/africabar_2018.csv") %>%
                                 extent_dem == "Do not understand question / democracy" ~ 8,
                                 TRUE ~ 9)) %>%
   
+# sat_dem is the extent to which a respondent is satisfied with democracy in 
+# their country. 
+  
   rename(sat_dem = q36) %>%
   mutate(sat_dem = case_when(sat_dem == "Very satisfied" ~ 4,
                              sat_dem == "Fairly satisfied" ~ 3,
@@ -111,12 +155,18 @@ d_2018 <- read.csv("raw_data/africabar_2018.csv") %>%
                              sat_dem == "The country is not a democracy" ~ 0,
                              TRUE ~ 9)) %>%
   
+# unfair is how often the respondent believes that people are treated unfairly
+# in their country. 
+  
   rename(unfair = q42d) %>%
   mutate(unfair = case_when(unfair == "Always" ~ 3,
                             unfair == "Often" ~ 2,
                             unfair == "Rarely" ~ 1,
                             unfair == "Never" ~ 0,
                             TRUE ~ 9)) %>%
+  
+# import_prob1 is the problem that the respondent thought was most important 
+# in their country. 
   
   rename(import_prob1 = q55pt1) %>%
   mutate(import_prob1 = case_when(import_prob1 == "Management of the economy" ~ 1,
@@ -153,6 +203,9 @@ d_2018 <- read.csv("raw_data/africabar_2018.csv") %>%
                                   import_prob1 == "War (international)" ~ 30,
                                   TRUE ~ 9999)) %>%
   
+# import_prob2 is the problem that the respondent thought was second most  
+# important in their country. 
+  
   rename(import_prob2 = q55pt2) %>%
   mutate(import_prob2 = case_when(import_prob2 == "Management of the economy" ~ 1,
                                   import_prob2 == "Wages, incomes and salaries" ~ 2,
@@ -187,6 +240,9 @@ d_2018 <- read.csv("raw_data/africabar_2018.csv") %>%
                                   import_prob2 == "Civil war" ~ 31,
                                   import_prob2 == "War (international)" ~ 30,
                                   TRUE ~ 9999)) %>%
+  
+# import_prob3 is the problem that the respondent thought was third most  
+# important in their country.
            
   rename(import_prob3 = q55pt3) %>%
   mutate(import_prob3 = case_when(import_prob3 == "Management of the economy" ~ 1,
@@ -222,6 +278,9 @@ d_2018 <- read.csv("raw_data/africabar_2018.csv") %>%
                                   import_prob3 == "Civil war" ~ 31,
                                   import_prob3 == "War (international)" ~ 30,
                                   TRUE ~ 9999)) %>%
+  
+# election_fair is the extent to which a respondent thought the previous 
+# election in there country was fair. 
            
   rename(election_fair = q23) %>%
   mutate(election_fair = case_when(election_fair == "Completely free and fair" ~ 4,
@@ -231,18 +290,19 @@ d_2018 <- read.csv("raw_data/africabar_2018.csv") %>%
                                    election_fair == "Do not understand question" ~ 8,
                                    TRUE ~ 9)) %>%
   
-  select(year, country_code, respno, urban, gender, direction_country, current_eco,
-         current_living, comp_living, looking_back, looking_ahead, pref_dem, extent_dem,
-         sat_dem, unfair, election_fair, import_prob1, import_prob2, import_prob3)
+# Selecting the relevant columns for the data analysis to later occur. 
   
-#  rename(gov_handle = q56) %>%
-#  rename(corruption = q44) %>%
+  select(year, country_code, respno, urban, gender, direction_country, 
+         current_eco,current_living, comp_living, looking_back, looking_ahead, 
+         pref_dem, extent_dem, sat_dem, unfair, election_fair, import_prob1, 
+         import_prob2, import_prob3)
 
 ```
 
 ```{r}
 
-# reading in 2013 data 
+# reading in 2013 data. We follow the same naming convention for the variables
+# in our 2018 dataset that we do in our 2013 dataset. 
 
 d_2013 <- read.csv("raw_data/africabar_2013.csv") %>%
   mutate(year = "2013") %>%
@@ -265,19 +325,21 @@ d_2013 <- read.csv("raw_data/africabar_2013.csv") %>%
   rename(import_prob2 = q63pt2) %>%
   rename(import_prob3 = q63pt3) %>%
   
-  select(year, country_code, respno, urban, gender, direction_country, current_eco,
-         current_living, comp_living, looking_back, looking_ahead, pref_dem, extent_dem,
-         sat_dem, unfair, election_fair, import_prob1, import_prob2, import_prob3)
-
+# selecting relevant columns to join with the 2018 dataset. 
   
-#  rename(import_prob = q63) %>%
-#  rename(gov_handle = q65) %>%
+  select(year, country_code, respno, urban, gender, direction_country, 
+         current_eco,current_living, comp_living, looking_back, looking_ahead, 
+         pref_dem, extent_dem, sat_dem, unfair, election_fair, import_prob1, 
+         import_prob2, import_prob3)
 
 ```
 
 ```{r}
 
-#Joining the data from 2 years
+# Below we are joining the 2018 and 2013 datasets. 
+# we rename the country codes to be in line with the world bank convention. 
+# There was very little structure to how Afrobarometer did respondent country
+# codes. therefore the renaming had to be done manually. 
 
 joined_data <- bind_rows(d_2018, d_2013) %>%
   mutate(country_code = case_when(country_code == "ALG" ~ "DZA",
@@ -305,6 +367,9 @@ joined_data <- bind_rows(d_2018, d_2013) %>%
                                   country_code == "SRL" ~ "SLE",
                                   country_code == "MRC" ~ "MAR",
                                   TRUE ~ country_code)) 
+
+# the data used 9 as the code for a non response. Converting these to NA to 
+# allow for easier data cleaning and dropping throughout analysis. 
   
 joined_data$urban[joined_data$urban == 9] <- NA
 joined_data$gender[joined_data$gender == 9] <- NA
@@ -319,7 +384,15 @@ joined_data$extent_dem[joined_data$extent_dem == 9] <- NA
 joined_data$sat_dem[joined_data$sat_dem == 9] <- NA
 joined_data$unfair[joined_data$unfair == 9] <- NA
 
+# Saving the rds to be used as a dataset for my shiny app. 
+
 saveRDS(joined_data, file = "shiny/data/joined_data.rds")
+
+```
+
+```{r}
+
+# creating a list of the countries that I will be working with. 
 
 list_countries <- unique(joined_data$country_code) %>%
   as_tibble() %>%
@@ -329,9 +402,11 @@ list_countries <- unique(joined_data$country_code) %>%
 
 ```{r}
 
-# WB data for my countries 
+# The below code chuck focuses on getting world bank data for the countries 
+# relevant for my analysis. 
 
-# Read in World Country code key. 
+# Here I am reading in the world bank data on codes, continents, and countries.
+# specifically from here we are getting the formal name of each country. 
 
 wb_codes <- read_csv("raw_data/wb_country_codes_2.csv",
                      col_types = cols(Continent_Name = col_character(),
@@ -345,7 +420,8 @@ wb_codes <- read_csv("raw_data/wb_country_codes_2.csv",
   filter(continent_name == "Africa") %>%
   select(continent_name, continent_code, country_name, country_code) 
 
-# Read in World Bank population dataset.
+# Read in World Bank population dataset. We pivot the data in order to join in
+# at the end of the chuck with other relevant data. 
 
 wb_pop <- read_csv("raw_data/wb_pop2.csv",
                 col_types = cols(.default = col_double(),
@@ -361,7 +437,8 @@ wb_pop <- read_csv("raw_data/wb_pop2.csv",
                cols = c(x2013, x2018)) %>%
   mutate(year = str_replace(year, "x", ""))
 
-# reading in world bank gdp data
+# reading in world bank gdp data. We pivot the data in order to join in
+# at the end of the chuck with other relevant data. 
 
 wb_gdp <- read_csv("raw_data/wb_gdp2.csv",
                    col_types = cols(.default = col_double(),
@@ -377,7 +454,9 @@ wb_gdp <- read_csv("raw_data/wb_gdp2.csv",
                cols = c(x2013, x2018)) %>%
   mutate(year = str_replace(year, "x", ""))
 
-# joining sequence 
+# joining sequence to join the data from the world bank. then joining the data 
+# to list countries dataset to only get the relevant countries for this 
+# project. 
   
 wb_data <- left_join(wb_pop, wb_gdp, by = c("country_code", "year"))
 wb_data_2 <- left_join(wb_codes, wb_data, by = "country_code")
@@ -385,9 +464,12 @@ wb_joined <- left_join(list_countries, wb_data_2, by = "country_code")
 
 ```
 
-```{r interactive map}
+```{r}
 
-# Making the interactive map
+# The below code chuck focuses on setting the data up to create an interactive 
+# map. We are joining the data from the joined_data data set as well as the 
+# world bank information in order to have data for our interactive map relating
+# to population, GDP, formal country name, and average direction. 
 
 data(wrld_simpl) 
 
@@ -396,7 +478,7 @@ world <- wrld_simpl
 direction_map_data <- joined_data %>%
   group_by(country_code, year) %>%
   drop_na() %>%
-  mutate(direction_tot = sum(direction_country)/n()-1) %>%
+  mutate(direction_tot = sum(direction_country)/n() - 1) %>%
   select(country_code, direction_tot, year) %>%
   unique() %>%
   left_join(wb_joined, by = c("country_code", "year")) %>%
@@ -405,37 +487,29 @@ direction_map_data <- joined_data %>%
 world@data <- wrld_simpl@data %>%
   left_join(direction_map_data, by = c("ISO3" = "country_code"))
   
+# Here we are setting the colors for the scale fill of the leaflet.
   
 pal <- colorNumeric(palette = "Blues",
                     domain = world$direction_tot)
 
-saveRDS(world, file = "shiny/data/world.rds")
+# We are saving the rds to use then in the server
 
-leaflet(world) %>%
-  setView(lng = 10.0383, lat = 5.7587, zoom = 2.25) %>%
-  addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(popup = paste("Country:", world$country_name, "<br>",
-                            "Population:", world$population, "<br>",
-                            "GDP:", round(world$gdp, digits = 2)),
-              stroke = FALSE, smoothFactor = 0.2, fillOpacity = 1,
-              color = ~pal(direction_tot)) %>%
-  addLegend("bottomright", pal = pal, values = ~direction_tot,
-            title = "Direction (2018)",
-            opacity = 1)
+saveRDS(world, file = "shiny/data/world.rds")
 
 ```
 
-
 ```{r}
 
-# Making the graphs for showing direction, year on year, and country by year
+# Below we are preparing the data to make bar graphs to show percent of 
+# respondents who believe the country is going in the wrong direction versus 
+# going in the right direction. This is for each country.
 
 direction <- joined_data %>%
   group_by(country_code, year) %>%
   drop_na(direction_country) %>%
   mutate(num_resp = n()) %>%
-  mutate(wrong = sum(direction_country == 1)/num_resp*100) %>%
-  mutate(right = sum(direction_country == 2)/num_resp*100) %>%
+  mutate(wrong = sum(direction_country == 1)/num_resp * 100) %>%
+  mutate(right = sum(direction_country == 2)/num_resp * 100) %>%
   select(country_code, year, wrong, right, num_resp) %>%
   unique() %>%
   pivot_longer(names_to = "direction",
@@ -445,7 +519,11 @@ direction <- joined_data %>%
                                   direction_value,
                                   -1*direction_value)) 
 
-# direction for Africa 2013 vs 2018 
+saveRDS(direction, file = "shiny/data/direction.rds")
+
+# Below we are preparing data to create plots for a year 2018 vs year 2013 
+# comparison of the direction in which all africans think their respective 
+# country is going. 
 
 direction_year_data <- direction %>%
   group_by(direction, year) %>%
@@ -453,100 +531,163 @@ direction_year_data <- direction %>%
   select(year, dirc_tot, direction) %>%
   unique() 
 
-direction_year_data %>%
-  ggplot(mapping = aes(x = year, y = dirc_tot, fill = direction)) +
-  geom_bar(stat = "identity") +
-  geom_hline(yintercept = 0) +
-  theme_bw() +
-  ylim(-75, 75) +
-  coord_flip() +
-  scale_fill_manual(values = c("steelblue", "lightsteelblue")) +
-  labs(title = "Direction in which repspondents believe the country is going",
-       x = "year",
-       y = "percent of respondents")
+# we are saving this rds to use to create a graph in our server. 
 
-
-# Direction graph 2018 by country
-
-direction %>%
-  filter(year == 2018) %>%
-  ggplot(mapping = aes(x = country_code, y = direction_value, fill = direction)) +
-  geom_bar(stat = "identity") +
-  geom_hline(yintercept = 0) +
-  theme_bw() +
-  ylim(-90, 90) +
-  coord_flip() +
-  scale_fill_manual(values = c("steelblue", "lightsteelblue")) +
-  labs(title = "Direction in which repspondents believe the country is going",
-       x = "country",
-       y = "percent of respondents") 
-
-#Direction graph 2013 by country
-
-direction %>%
-  filter(year == 2013) %>%
-  ggplot(mapping = aes(x = country_code, y = direction_value, fill = direction)) +
-  geom_bar(stat = "identity") +
-  geom_hline(yintercept = 0) +
-  theme_bw() +
-  ylim(-90, 90) +
-  coord_flip() +
-  scale_fill_manual(values = c("steelblue", "lightsteelblue")) +
-  labs(title = "Direction in which repspondents believe the country is going",
-       x = "country",
-       y = "percent of respondents")
-
-saveRDS(direction, file = "shiny/data/direction.rds")
-
+saveRDS(direction_year_data, file = "shiny/data/direction_year_data.rds")
 
 ```
 
-```{r models economics/livelihood}
+```{r}
 
-# all countries, general direction economics and livelihood 2018
+# Here we are preparing the data to run regression models. We are changing 
+# direction_country to still be a binary variable but on the scale of 1 and 0,
+# whereby 1 is the right direction and 0 is the wrong direction. 
 
-dirc_2018 <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
-                      urban + current_living + comp_living, 
-                      data = joined_data %>% filter(year == 2018),
+joined_data_stan <- joined_data %>%
+  mutate(direction_country = ifelse(direction_country == 2, 1, 0)) %>%
+  rep_sample_n(1000) %>%
+  slice(1:1000)
+
+saveRDS(joined_data_stan, file = "shiny/data/joined_data_stan.rds")
+
+# Here we are running a binomial regression whereby we are modeling 
+# direction_country as a function of numerous living and economic sentiments
+# the the year of 2018 for all countries.
+
+dirc_2018 <- stan_glm(formula = direction_country ~ current_eco + looking_back 
+                      + looking_ahead + urban + current_living + comp_living, 
+                      family = binomial,
+                      data = joined_data_stan %>% filter(year == 2018),
                       refresh = 0)
+
+# we are creating and saving the table for the regression for 2018. We are 
+# saving the tables in the rmd to reduce the loading time of the shiny app.
 
 tbl_2018 <- tbl_regression(dirc_2018) %>%
   as_gt() %>%
-  tab_header(title = "Regression of belief of the Direction in which the country is going 2018",
+  tab_header(title = "Regression of belief of the Direction in 
+             which the country is going 2018",
              subtitle= "The Effect of different variables on Direction") %>%
   tab_source_note("Afrobarometer") 
 
-# all countries, general direction economics and livelihood 2013
+saveRDS(tbl_2018, file = "shiny/data/tbl_2018.rds")
 
-dirc_2013 <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
-                      urban + current_living + comp_living, 
-                      data = joined_data %>% filter(year == 2013),
+# Here we are running a binomial regression whereby we are modeling 
+# direction_country as a function of numerous living and economic sentiments
+# the the year of 2013 for all countries.
+
+dirc_2013 <- stan_glm(formula = direction_country ~ current_eco + looking_back 
+                      + looking_ahead + urban + current_living + comp_living, 
+                      family = binomial,
+                      data = joined_data_stan %>% filter(year == 2013),
                       refresh = 0)
+
+# we are creating and saving the table for the regression for 2013. 
 
 tbl_2013 <- tbl_regression(dirc_2013) %>%
   as_gt() %>%
-  tab_header(title = "Regression of belief of the Direction in which the country is going 2013",
+  tab_header(title = "Regression of belief of the Direction in 
+             which the country is going 2013",
              subtitle= "The Effect of different variables on Direction") %>%
   tab_source_note("Afrobarometer") 
-  
-# functions to do for each country individually depending on what user selects
 
-func_2018 <- function(a, b) {
-  dirc_eco <- stan_glm(formula = direction_country ~ current_eco + looking_back + looking_ahead +
-                       urban + current_living + comp_living, 
-                       data = joined_data %>% filter(country_code == a & year == b),
-                       refresh = 0)
-  tbl_dirc <- tbl_regression(dirc_eco) %>%
-  as_gt() %>%
-  tab_header(title = "Regression of belief of the Direction in which the country is going",
-             subtitle= "The Effect of different variables on Direction") %>%
-  tab_source_note("Afrobarometer") 
-  
-  return(tbl_dirc)
-}
+saveRDS(tbl_2013, file = "shiny/data/tbl_2013.rds")
 
 ```
 
+```{r}
+
+# Below we are preparing the data in order to create a wordcloud of what 
+# people thought about the issues that face the country. More importantly 
+# we are looking at how many people said a specific issue was in the three
+# most important issues facing their country specifically. We aggregate this 
+# for the data across the continent. 
+
+sentiment1 <- joined_data %>%
+  filter(import_prob1 %in% c(1:32)) %>%
+  group_by(import_prob1, year) %>%
+  summarize(countprob1 = n(),
+            .groups = "drop") %>%
+  rename(import_prob = import_prob1)
+
+sentiment2 <- joined_data %>%
+  filter(import_prob1 %in% c(1:32)) %>%
+  group_by(import_prob2, year) %>%
+  summarize(countprob2 = n(),
+            .groups = "drop") %>%
+  rename(import_prob = import_prob2)
+
+sentiment3 <- joined_data %>%
+  filter(import_prob1 %in% c(1:32)) %>%
+  group_by(import_prob3, year) %>%
+  summarize(countprob3 = n(),
+            .groups = "drop") %>%
+  rename(import_prob = import_prob3)
+
+
+sent_tot <- sentiment1 %>%
+  inner_join(sentiment2, by = c("import_prob", "year")) %>%
+  inner_join(sentiment3, by = c("import_prob", "year")) %>%
+  pivot_longer(names_to = "type",
+               values_to = "number",
+               cols = c(countprob1, countprob2, countprob3)) %>%
+  group_by(import_prob, year) %>%
+  mutate(total = sum(number),
+         .groups = "drop") %>%
+  select(import_prob, year, total) %>%
+  unique() %>%
+  mutate(import_prob = case_when(import_prob == 1 ~"Management of the economy", 
+                                 import_prob == 2 ~"Wages, incomes and salaries", 
+                                 import_prob == 3 ~"Unemployment",
+                                 import_prob == 4 ~ "Poverty/ destitution", 
+                                 import_prob == 5 ~ "Rates and Taxes", 
+                                 import_prob == 6 ~ "Loans/ credit", 
+                                 import_prob == 7 ~ "Farming/agriculture",
+                                 import_prob == 32 ~ "Agricultural marketing",
+                                 import_prob == 8 ~ "Food shortage/famine",
+                                 import_prob == 9 ~ "Drought", 
+                                 import_prob == 10 ~ "Land",
+                                 import_prob == 11 ~ "Transportation",
+                                 import_prob == 12 ~ "Communications", 
+                                 import_prob == 13 ~ "Infrastructure/ roads",
+                                 import_prob == 14 ~ "Education",
+                                 import_prob == 15 ~ "Housing",
+                                 import_prob == 16 ~ "Electricity",
+                                 import_prob == 17 ~ "Water supply",
+                                 import_prob == 18 ~ "Orphans/ street children/homeless children",
+                                 import_prob == 19 ~ "Services (other)",
+                                 import_prob == 20 ~ "Health",
+                                 import_prob == 21 ~ "aids",
+                                 import_prob == 22 ~ "Sickness/ Disease",
+                                 import_prob == 23 ~ "Crime and Security",
+                                 import_prob == 24 ~ "Corruption",
+                                 import_prob == 25 ~ "Political violence", 
+                                 import_prob == 26 ~ "Political instability/ ethnic tensions",
+                                 import_prob == 27 ~ "Discrimination/ inequality", 
+                                 import_prob == 28 ~ "Gender issues / womens rights",
+                                 import_prob == 29 ~ "Democracy/political rights",
+                                 import_prob == 31 ~ "Civil war",
+                                 import_prob == 30 ~ "International war",
+                                  TRUE ~ "NA"))
+
+# creating and saving important issue sentiment data for 2018 
+
+sent_tot_2018 <- sent_tot %>%
+  filter(year == "2018") %>%
+  subset(select = -year)
+
+saveRDS(sent_tot_2018, file = "shiny/data/sent_tot_2018.rds")
+
+# creating and saving important issue sentiment data for 2013
+
+sent_tot_2013 <- sent_tot %>%
+  filter(year == "2013") %>%
+  subset(select = -year)
+
+saveRDS(sent_tot_2013, file = "shiny/data/sent_tot_2013.rds")
+
+
+```
 
 
 
