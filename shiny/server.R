@@ -2,11 +2,10 @@
 # Here we are calling the necessary rds files that we saved in from our 
 # gather.rmd
 
-x <- readRDS(file = "data/direction.rds")
-y <- readRDS(file = "data/joined_data.rds")
+direction <- readRDS(file = "data/direction.rds")
+joined <- readRDS(file = "data/joined_data.rds")
 world <- readRDS(file = "data/world.rds")
-cloud <- readRDS(file = "data/wordcloud.rds")
-direction <- readRDS(file = "data/direction_year_data.rds")
+direction_year <- readRDS(file = "data/direction_year_data.rds")
 tbl_2018 <- readRDS(file = "data/tbl_2018.rds")
 tbl_2013 <- readRDS(file = "data/tbl_2013.rds")
 sent_2018 <- readRDS(file = "data/sent_tot_2018.rds")
@@ -49,7 +48,7 @@ shinyServer(function(input, output) {
       
     output$direction <- renderPlot({
         if(input$plotInput == "year") {
-            direction %>%
+            direction_year %>%
                 ggplot(mapping = aes(x = year, 
                                      y = dirc_tot, 
                                      fill = direction)) +
@@ -60,13 +59,12 @@ shinyServer(function(input, output) {
                 coord_flip() +
                 scale_fill_manual(values = c("steelblue", 
                                              "lightsteelblue")) +
-                labs(title = "Direction in which repspondents 
-                     believe the country is going",
-                     x = "year",
-                     y = "percent of respondents")
+                labs(title = "Percentage of respondents that believe their country is heading in the right direction vs the wrong direction.",
+                     x = "Year",
+                     y = "Percent of Respondents")
         } else {
             if(input$plotInput == "2018"){
-                x %>%
+                direction %>%
                     filter(year == 2018) %>%
                     ggplot(mapping = aes(x = country_code, 
                                          y = direction_value, 
@@ -78,12 +76,11 @@ shinyServer(function(input, output) {
                     coord_flip() +
                     scale_fill_manual(values = c("steelblue", 
                                                  "lightsteelblue")) +
-                    labs(title = "Direction in which repspondents 
-                         believe the country is going",
-                         x = "country",
-                         y = "percent of respondents") }
+                    labs(title = "Percentage of respondents that believe their country is heading in the right direction vs the wrong direction.",
+                         x = "Country",
+                         y = "Percent of Respondents") }
             else {
-                x %>%
+                direction %>%
                     filter(year == 2013) %>%
                     ggplot(mapping = aes(x = country_code, 
                                          y = direction_value, 
@@ -95,10 +92,9 @@ shinyServer(function(input, output) {
                     coord_flip() +
                     scale_fill_manual(values = c("steelblue", 
                                                  "lightsteelblue")) +
-                    labs(title = "Direction in which repspondents
-                         believe the country is going",
-                         x = "country",
-                         y = "percent of respondents")             
+                    labs(title = "Percentage of respondents that believe their country is heading in the right direction vs the wrong direction.",
+                         x = "Country",
+                         y = "Percent of respondents")             
             
         } }
         
@@ -145,6 +141,7 @@ shinyServer(function(input, output) {
                                                   & year == input$reg_year),
                            family = binomial,
                            refresh = 0)
+      
       tbl_dirc <- tbl_regression(dirc_eco) %>%
           as_gt() %>%
           tab_header(title = "Regression of belief of the Direction 

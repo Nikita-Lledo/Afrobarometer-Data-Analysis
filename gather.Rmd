@@ -544,9 +544,7 @@ saveRDS(direction_year_data, file = "shiny/data/direction_year_data.rds")
 # whereby 1 is the right direction and 0 is the wrong direction. 
 
 joined_data_stan <- joined_data %>%
-  mutate(direction_country = ifelse(direction_country == 2, 1, 0)) %>%
-  rep_sample_n(1000) %>%
-  slice(1:1000)
+  mutate(direction_country = ifelse(direction_country == 2, 1, 0)) 
 
 saveRDS(joined_data_stan, file = "shiny/data/joined_data_stan.rds")
 
